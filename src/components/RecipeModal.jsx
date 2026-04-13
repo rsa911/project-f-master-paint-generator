@@ -1,8 +1,7 @@
 import { useRef } from 'react'
 import { toPng } from 'html-to-image'
 import ColorSwatch from './ColorSwatch'
-import { scaleFormula, scaleWash, scaleGlaze, calcCost, PIGMENT_PRICES } from '../utils/formula'
-import colorMap from '../constants/colorMap'
+import { scaleFormula, scaleWash, scaleGlaze, calcCost } from '../utils/formula'
 
 function CopyIcon() {
   return (
@@ -21,19 +20,21 @@ function Row({ label, value }) {
   )
 }
 
-export default function RecipeModal({ paint, targetVolume, bottlePrice, allPaints, onClose, onNavigate }) {
+export default function RecipeModal({
+  paint, targetVolume, bottlePrice, pigmentPrices, allPaints,
+  onClose, onNavigate, onEdit,
+}) {
   const cardRef = useRef(null)
 
   if (!paint) return null
 
-  const hex = colorMap[paint.id] ?? '#6B7280'
-  const formula = scaleFormula(paint.formulaDrops, targetVolume)
-  const wash = scaleWash(targetVolume)
-  const glaze = scaleGlaze(targetVolume)
-  const cost = calcCost(paint.formulaDrops, targetVolume, bottlePrice)
+  const formula = scaleFormula(paint.formula, targetVolume)
+  const wash    = scaleWash(targetVolume)
+  const glaze   = scaleGlaze(targetVolume)
+  const cost    = calcCost(paint.formula, targetVolume, bottlePrice, pigmentPrices)
   const costPerMl = (cost / targetVolume).toFixed(3)
 
-  const highlightPaint = paint.highlightId !== 'White'
+  const highlightPaint = paint.highlightId && paint.highlightId !== 'White'
     ? allPaints.find(p => p.id === paint.highlightId)
     : null
 
@@ -59,10 +60,6 @@ export default function RecipeModal({ paint, targetVolume, bottlePrice, allPaint
     a.click()
   }
 
-  function handleCopyText() {
-    navigator.clipboard.writeText(buildTextExport())
-  }
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
@@ -76,11 +73,11 @@ export default function RecipeModal({ paint, targetVolume, bottlePrice, allPaint
           style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}
         >
           {/* Color strip */}
-          <div className="h-2 rounded-full mb-5" style={{ backgroundColor: hex }} />
+          <div className="h-2 rounded-full mb-5" style={{ backgroundColor: paint.hex }} />
 
           {/* Title row */}
           <div className="flex items-center gap-4 mb-5">
-            <ColorSwatch id={paint.id} size="lg" />
+            <ColorSwatch hex={paint.hex} size="lg" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">
@@ -89,7 +86,7 @@ export default function RecipeModal({ paint, targetVolume, bottlePrice, allPaint
                 <span className="text-xs text-slate-500">{paint.brand}</span>
               </div>
               <h2 className="text-xl font-semibold text-slate-100 mt-0.5">{paint.name}</h2>
-              <p className="text-xs text-slate-500 font-mono">{paint.formulaDrops}</p>
+              <p className="text-xs text-slate-500 font-mono">{paint.formula}</p>
             </div>
           </div>
 
@@ -99,9 +96,7 @@ export default function RecipeModal({ paint, targetVolume, bottlePrice, allPaint
               <h3 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
                 Base Mix — {targetVolume}ml
               </h3>
-              <p className="text-sm font-mono text-slate-200 bg-slate-900/50 rounded px-3 py-2">
-                {formula}
-              </p>
+              <p className="text-sm font-mono text-slate-200 bg-slate-900/50 rounded px-3 py-2">{formula}</p>
             </section>
 
             <section>
@@ -116,7 +111,7 @@ export default function RecipeModal({ paint, targetVolume, bottlePrice, allPaint
 
             <div className="space-y-0 bg-slate-900/30 rounded-lg px-3 py-1">
               <Row label="Hobby equivalent" value={`${paint.hobbyColor} (${paint.brand})`} />
-              <Row label="Contrast pairing" value={paint.contrastPaint} />
+              <Row label="Contrast pairing"  value={paint.contrastPaint} />
               <Row
                 label="Highlight"
                 value={
@@ -125,20 +120,18 @@ export default function RecipeModal({ paint, targetVolume, bottlePrice, allPaint
                 }
               />
               <Row label={`Cost @ ${targetVolume}ml`} value={`$${cost}`} />
-              <Row label="Cost per ml" value={`$${costPerMl}`} />
+              <Row label="Cost per ml"                value={`$${costPerMl}`} />
             </div>
 
-            {paint.highlightId !== 'White' && highlightPaint && (
+            {highlightPaint && (
               <button
                 onClick={() => onNavigate(highlightPaint)}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors text-left"
               >
-                <ColorSwatch id={highlightPaint.id} size="sm" />
+                <ColorSwatch hex={highlightPaint.hex} size="sm" />
                 <div>
                   <span className="text-xs text-slate-400">Highlight →</span>
-                  <p className="text-sm text-slate-200">
-                    {highlightPaint.id} — {highlightPaint.name}
-                  </p>
+                  <p className="text-sm text-slate-200">{highlightPaint.id} — {highlightPaint.name}</p>
                 </div>
               </button>
             )}
@@ -154,12 +147,20 @@ export default function RecipeModal({ paint, targetVolume, bottlePrice, allPaint
             Export PNG
           </button>
           <button
-            onClick={handleCopyText}
+            onClick={() => navigator.clipboard.writeText(buildTextExport())}
             className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded px-4 py-2 transition-colors"
           >
             <CopyIcon />
-            Copy Text
+            Copy
           </button>
+          {onEdit && (
+            <button
+              onClick={() => onEdit(paint)}
+              className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded px-4 py-2 transition-colors"
+            >
+              Edit
+            </button>
+          )}
           <button
             onClick={onClose}
             className="bg-slate-700 hover:bg-slate-600 text-slate-400 text-sm rounded px-4 py-2 transition-colors"

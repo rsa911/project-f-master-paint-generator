@@ -1,0 +1,13 @@
+services:
+  masterpaint:
+    build: .
+    container_name: masterpaint-generator
+    restart: always
+    ports:
+      - "3001:3001"
+    volumes:
+      - /volume2/Claude/project-f-master-paint-generator/data:/app/data
+    environment:
+      - NODE_ENV=production
+      - DATA_PATH=/app/data/masterpaint.db
+      - PORT=3001
