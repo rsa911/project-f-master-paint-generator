@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import ColorSwatch from './ColorSwatch'
+import CMYColorWheel from './CMYColorWheel'
 import { cmyToHex } from '../utils/cmyToHex'
 import { createColor, updateColor } from '../api'
 
 const BRANDS = ['AK', 'Citadel', 'AP', 'Other']
 
-export default function ColorEditor({ paint, onClose, onSaved }) {
+export default function ColorEditor({ paint, allPaints = [], onClose, onSaved }) {
   const isEdit = Boolean(paint)
   const [form, setForm] = useState({
     id:           paint?.id           ?? '',
@@ -68,9 +69,29 @@ export default function ColorEditor({ paint, onClose, onSaved }) {
             required
             value={form.formula}
             onChange={v => set('formula', v)}
-            placeholder="e.g. 1M:3Y:1W  or  9[1M:3Y]:1Bk"
+            placeholder="e.g. 1M:3Y:4W  or  1M:3Y:3Bk"
             hint={previewHex}
           />
+
+          {allPaints.length > 0 && (
+            <details className="group">
+              <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-300 select-none list-none flex items-center gap-1">
+                <span className="transition-transform group-open:rotate-90 inline-block">▶</span>
+                Color Wheel Picker
+              </summary>
+              <div className="mt-2 flex justify-center">
+                <CMYColorWheel
+                  paints={allPaints}
+                  selectedId={paint?.id}
+                  onSelect={p => set('formula', p.formula)}
+                  size={260}
+                />
+              </div>
+              <p className="text-xs text-slate-500 text-center mt-1">
+                Click a wedge to copy its formula into the field above
+              </p>
+            </details>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Contrast Paint" value={form.contrastPaint} onChange={v => set('contrastPaint', v)} />

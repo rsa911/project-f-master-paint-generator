@@ -6,10 +6,11 @@ import RecipeModal from './components/RecipeModal'
 import ColorEditor from './components/ColorEditor'
 import PigmentPriceEditor from './components/PigmentPriceEditor'
 import ProductionPlanner from './components/ProductionPlanner'
+import CMYColorWheel from './components/CMYColorWheel'
 import { getColors, deleteColor, getPigments } from './api'
 
 export default function App() {
-  const [tab, setTab] = useState('colors') // 'colors' | 'planner'
+  const [tab, setTab] = useState('colors') // 'colors' | 'planner' | 'wheel'
   const [paints, setPaints]     = useState([])
   const [pigments, setPigments] = useState([])
   const [loading, setLoading]   = useState(true)
@@ -117,7 +118,7 @@ export default function App() {
 
         {/* Nav tabs */}
         <div className="max-w-7xl mx-auto px-4 flex gap-1 pb-0">
-          {[['colors', 'Colors'], ['planner', 'Production Planner']].map(([key, label]) => (
+          {[['colors', 'Colors'], ['planner', 'Production Planner'], ['wheel', 'Color Wheel']].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -174,6 +175,31 @@ export default function App() {
         </>
       )}
 
+      {!loading && tab === 'wheel' && (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex flex-col items-center gap-6">
+            <div className="text-center">
+              <h2 className="text-base font-semibold text-slate-200 mb-1">CMY Color Wheel</h2>
+              <p className="text-xs text-slate-500">
+                Outer ring = base · next = tint · next = tone · inner = shadow · Click any wedge to open recipe
+              </p>
+            </div>
+            <CMYColorWheel
+              paints={paints}
+              selectedId={selectedPaint?.id}
+              onSelect={p => setSelectedPaint(p)}
+              size={560}
+              showLabels
+            />
+            <div className="flex gap-6 text-xs text-slate-500 border border-slate-800 rounded-lg px-4 py-2">
+              {[['Outer ring', 'Base color'], ['2nd ring', 'Tint (+L*)'], ['3rd ring', 'Tone (−chroma)'], ['Inner ring', 'Shadow (−L*)']].map(([ring, desc]) => (
+                <span key={ring}><span className="text-slate-400">{ring}</span> = {desc}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {!loading && tab === 'planner' && (
         <div className="pt-6">
           <ProductionPlanner
@@ -202,6 +228,7 @@ export default function App() {
       {editingPaint !== null && (
         <ColorEditor
           paint={Object.keys(editingPaint).length > 0 ? editingPaint : null}
+          allPaints={paints}
           onClose={() => setEditingPaint(null)}
           onSaved={handleColorSaved}
         />
